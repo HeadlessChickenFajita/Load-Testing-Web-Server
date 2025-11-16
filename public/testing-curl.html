@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing with curl</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Testing with curl</h1>
+
+        <p>curl is a command-line tool for making HTTP requests. It's perfect for testing and debugging your server.</p>
+
+        <h2>Basic Requests</h2>
+
+        <div class="code-block"># Simple GET request
+curl http://localhost:8080/
+
+# Request a static file
+curl http://localhost:8080/index.html
+
+# Test the echo endpoint
+curl http://localhost:8080/echo/1000</div>
+
+        <h2>Viewing Headers (Verbose Mode)</h2>
+
+        <div class="code-block"># See full HTTP exchange
+curl -v http://localhost:8080/echo/100
+
+Output:
+> GET /echo/100 HTTP/1.1          # Request
+> Host: localhost:8080
+> User-Agent: curl/7.68.0
+>
+< HTTP/1.1 200 OK                 # Response
+< Content-Type: text/plain
+< Content-Length: 100
+< X-Payload-Hash: abc123...
+< Connection: keep-alive
+<</div>
+
+        <h2>Viewing Just Response Headers</h2>
+
+        <div class="code-block"># HEAD request (headers only, no body)
+curl -I http://localhost:8080/echo/100
+
+# Or with GET but showing headers
+curl -i http://localhost:8080/echo/100</div>
+
+        <h2>Custom Headers</h2>
+
+        <div class="code-block"># Send Connection: close
+curl -H "Connection: close" http://localhost:8080/echo/100
+
+# Multiple custom headers
+curl -H "Connection: keep-alive" \
+     -H "User-Agent: MyClient/1.0" \
+     http://localhost:8080/echo/100</div>
+
+        <h2>Testing Keep-Alive</h2>
+
+        <div class="code-block"># curl reuses connections in HTTP/1.1 by default
+# Multiple URLs use same connection
+curl http://localhost:8080/echo/100 \
+     http://localhost:8080/echo/200 \
+     http://localhost:8080/echo/300
+
+# Force new connection for each request
+curl --no-keepalive http://localhost:8080/echo/100</div>
+
+        <h2>Testing Errors</h2>
+
+        <div class="code-block"># Test 404
+curl http://localhost:8080/nonexistent.html
+
+# Test invalid echo size
+curl http://localhost:8080/echo/not-a-number
+
+# Test payload too large
+curl http://localhost:8080/echo/200000000</div>
+
+        <h2>Timing Information</h2>
+
+        <div class="code-block"># Show timing breakdown
+curl -w "\nTime: %{time_total}s\n" \
+     http://localhost:8080/echo/1000000
+
+# Detailed timing
+curl -w "DNS: %{time_namelookup}s\nConnect: %{time_connect}s\nTotal: %{time_total}s\n" \
+     -o /dev/null -s \
+     http://localhost:8080/echo/100</div>
+
+        <h2>Saving Response to File</h2>
+
+        <div class="code-block"># Save to file
+curl -o response.txt http://localhost:8080/echo/1000
+
+# Or redirect
+curl http://localhost:8080/echo/1000 > response.txt</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="browser-devtools.html">Browser DevTools</a> - Visual testing</li>
+                <li><a href="load-testing.html">Load Testing</a> - High-volume testing</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Server Security Basics</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #856404; padding: 15px; margin: 15px 0; }
+        .danger { background: #f8d7da; border-left: 4px solid #721c24; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Web Server Security Basics</h1>
+
+        <p>Even a simple web server needs security measures to prevent attacks. This guide covers the essential security principles implemented in our server.</p>
+
+        <h2>1. Directory Traversal Prevention</h2>
+
+        <div class="danger">
+            <strong>🚨 Critical Vulnerability:</strong> Never trust paths from URLs!
+        </div>
+
+        <h3>The Attack</h3>
+        <div class="code-block">GET /../../../etc/passwd HTTP/1.1</div>
+
+        <p>Without protection, this could allow attackers to read any file on the system!</p>
+
+        <h3>The Defense</h3>
+        <div class="code-block">// Check for ".." in path
+if (path.contains("..")) {
+    sendError(out, 403, "Forbidden");
+    return;
+}
+
+// Alternative: Use canonical paths
+Path requestedPath = Paths.get(PUBLIC_DIR, path);
+Path publicPath = Paths.get(PUBLIC_DIR).toRealPath();
+
+if (!requestedPath.toRealPath().startsWith(publicPath)) {
+    sendError(out, 403, "Forbidden");
+    return;
+}</div>
+
+        <h2>2. Resource Exhaustion (DoS) Prevention</h2>
+
+        <h3>Payload Size Limits</h3>
+        <div class="code-block">int size = Integer.parseInt(sizeParam);
+
+// ❌ WITHOUT LIMIT: Client requests /echo/2147483647
+// Server tries to allocate 2GB → OutOfMemoryError!
+
+// ✅ WITH LIMIT: Enforce reasonable maximum
+if (size < 0 || size > 100_000_000) {
+    sendError(out, 400, "Size out of range (0-100MB)");
+    return;
+}</div>
+
+        <h3>Connection Timeouts</h3>
+        <div class="code-block">// Prevent clients from holding connections forever
+socket.setSoTimeout(keepAliveTimeout * 1000);
+
+// Without timeout: Malicious client connects and never sends data
+// → Server thread blocked forever</div>
+
+        <h2>3. Input Validation</h2>
+
+        <table>
+            <tr>
+                <th>Input</th>
+                <th>Validation</th>
+                <th>Why</th>
+            </tr>
+            <tr>
+                <td>Request line</td>
+                <td>Check for null, empty, valid parts</td>
+                <td>Prevent NullPointerException</td>
+            </tr>
+            <tr>
+                <td>Path</td>
+                <td>Check for "..", validate format</td>
+                <td>Prevent directory traversal</td>
+            </tr>
+            <tr>
+                <td>HTTP method</td>
+                <td>Whitelist allowed methods (GET)</td>
+                <td>Reject unsupported operations</td>
+            </tr>
+            <tr>
+                <td>Size parameter</td>
+                <td>Parse as int, check range</td>
+                <td>Prevent DoS and errors</td>
+            </tr>
+        </table>
+
+        <h2>4. Safe Error Messages</h2>
+
+        <div class="code-block">// ❌ BAD: Expose internal details
+catch (Exception e) {
+    sendError(out, 500, "Error: " + e.getMessage() +
+              " at " + e.getStackTrace()[0]);
+}
+// Reveals code structure to attackers!
+
+// ✅ GOOD: Generic error message
+catch (Exception e) {
+    System.err.println("Internal error: " + e.getMessage());
+    sendError(out, 500, "Internal Server Error");
+}
+// Log details server-side, don't expose to client</div>
+
+        <h2>5. Resource Cleanup</h2>
+
+        <div class="code-block">// Always close sockets to prevent resource leaks
+try (Socket clientSocket = serverSocket.accept()) {
+    handleConnection(clientSocket);
+} // Auto-closed even if exception occurs
+
+// For virtual threads, explicitly close in finally:
+finally {
+    try {
+        clientSocket.close();
+    } catch (IOException e) {
+        // Log but don't crash
+    }
+}</div>
+
+        <h2>6. Header Injection Prevention</h2>
+
+        <div class="warning">
+            <strong>⚠️ Warning:</strong> If you ever use user input in headers, sanitize it!
+        </div>
+
+        <div class="code-block">// ❌ DANGEROUS: User input in header
+String userValue = getUserInput();
+writer.print("X-Custom: " + userValue + "\r\n");
+
+// Attack: userValue = "bad\r\nX-Evil: injected"
+// Result: Multiple headers injected!
+
+// ✅ SAFE: Strip CRLF characters
+String sanitized = userValue.replace("\r", "")
+                             .replace("\n", "");
+writer.print("X-Custom: " + sanitized + "\r\n");</div>
+
+        <h2>7. Method Validation</h2>
+
+        <div class="code-block">// Only allow specific HTTP methods
+if (!method.equals("GET")) {
+    sendError(out, 405, "Method Not Allowed");
+    return;
+}
+
+// Principle: Whitelist allowed operations,
+// reject everything else by default</div>
+
+        <h2>Security Checklist</h2>
+
+        <ul>
+            <li>✅ Validate all input (paths, parameters, headers)</li>
+            <li>✅ Check for directory traversal (".." in paths)</li>
+            <li>✅ Enforce resource limits (size, timeout)</li>
+            <li>✅ Use try-with-resources for automatic cleanup</li>
+            <li>✅ Generic error messages (don't expose internals)</li>
+            <li>✅ Whitelist HTTP methods (reject unknown methods)</li>
+            <li>✅ Set socket timeouts (prevent resource holding)</li>
+            <li>✅ Log security events server-side</li>
+        </ul>
+
+        <div class="note">
+            <strong>💡 Defense in Depth:</strong> Multiple layers of security work together. Even if one check fails, others catch the problem. Never rely on a single security measure!
+        </div>
+
+        <h2>Testing Security</h2>
+
+        <div class="code-block"># Test directory traversal protection
+curl http://localhost:8080/../../../etc/passwd
+# Should return: 403 Forbidden
+
+# Test size limit
+curl http://localhost:8080/echo/200000000
+# Should return: 400 Bad Request
+
+# Test invalid method
+curl -X DELETE http://localhost:8080/
+# Should return: 405 Method Not Allowed</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="static-files.html">Static File Serving</a> - Directory traversal details</li>
+                <li><a href="parsing-requests.html">Parsing HTTP Requests</a> - Input validation</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

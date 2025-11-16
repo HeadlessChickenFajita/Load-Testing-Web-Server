@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Verification & Data Integrity</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Hash Verification & Data Integrity</h1>
+
+        <p>Hashing allows clients to verify they received the correct data. Our server uses SHA-256 to provide integrity checks for the /echo endpoint.</p>
+
+        <h2>What is a Hash?</h2>
+
+        <p>A cryptographic hash function takes input data and produces a fixed-size "fingerprint":</p>
+
+        <ul>
+            <li><strong>Deterministic:</strong> Same input always produces same hash</li>
+            <li><strong>One-way:</strong> Can't reverse the hash to get original data</li>
+            <li><strong>Collision-resistant:</strong> Nearly impossible to find two inputs with same hash</li>
+            <li><strong>Small change → Different hash:</strong> Change one bit, entire hash changes</li>
+        </ul>
+
+        <h2>SHA-256 in Java</h2>
+
+        <div class="code-block">import java.security.MessageDigest;
+
+// Create SHA-256 digest
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+// Hash the data
+byte[] payload = "Hello, World!".getBytes();
+byte[] hashBytes = digest.digest(payload);
+
+// Convert to hex string
+String hash = bytesToHex(hashBytes);
+// Example: "dffd6021bb2bd5b0af676290809ec3a53191dd81..."</div>
+
+        <h2>Converting Hash to Hex</h2>
+
+        <div class="code-block">private String bytesToHex(byte[] bytes) {
+    StringBuilder sb = new StringBuilder();
+    for (byte b : bytes) {
+        sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
+}
+
+// SHA-256 produces 32 bytes = 64 hex characters</div>
+
+        <h2>How Our Server Uses It</h2>
+
+        <p>The /echo endpoint generates deterministic data and computes its hash:</p>
+
+        <div class="code-block">// 1. Generate payload (deterministic pattern)
+byte[] payload = generatePayload(size);
+
+// 2. Compute hash
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hashBytes = digest.digest(payload);
+String hash = bytesToHex(hashBytes);
+
+// 3. Send hash in response header
+writer.print("X-Payload-Hash: " + hash + "\r\n");
+
+// 4. Send payload
+out.write(payload);</div>
+
+        <h2>Client-Side Verification</h2>
+
+        <p>The client (ltc.java) verifies data integrity:</p>
+
+        <div class="code-block">// 1. Read X-Payload-Hash header from response
+String expectedHash = headers.get("x-payload-hash");
+
+// 2. Read the payload
+byte[] receivedPayload = readPayload(in, contentLength);
+
+// 3. Compute hash of received data
+String actualHash = computeSHA256(receivedPayload);
+
+// 4. Compare
+if (!expectedHash.equals(actualHash)) {
+    System.err.println("Hash mismatch! Data corrupted!");
+    return false;
+}
+
+// Data verified!</div>
+
+        <h2>Deterministic Payload Generation</h2>
+
+        <p>For hash verification to work, the payload must be deterministic:</p>
+
+        <div class="code-block">private byte[] generatePayload(int size) {
+    byte[] payload = new byte[size];
+    String pattern = "0123456789";
+    byte[] patternBytes = pattern.getBytes();
+
+    for (int i = 0; i < size; i++) {
+        payload[i] = patternBytes[i % patternBytes.length];
+    }
+
+    return payload;
+}
+
+// For size=25, generates: "0123456789012345678901234"
+// Same size always produces same payload → same hash</div>
+
+        <h2>Why This Matters</h2>
+
+        <ul>
+            <li><strong>Network errors:</strong> Detect corrupted data during transmission</li>
+            <li><strong>Testing:</strong> Verify server generated correct data</li>
+            <li><strong>Real-world parallel:</strong> File downloads use hashes (MD5, SHA-256)</li>
+        </ul>
+
+        <div class="note">
+            <strong>💡 Real-World Example:</strong> When you download a file, many sites provide a SHA-256 hash. You can verify your download wasn't corrupted or tampered with by computing the hash yourself and comparing!
+        </div>
+
+        <h2>Testing Hash Verification</h2>
+
+        <div class="code-block"># Make request and view hash header
+curl -v http://localhost:8080/echo/100
+
+# Look for:
+< X-Payload-Hash: a591a6d40bf420404a011733cfb7b190d62c65bf...
+
+# The client (ltc.java) automatically verifies this</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="http-headers.html">HTTP Headers Reference</a> - Custom headers</li>
+                <li><a href="load-testing.html">Load Testing</a> - How ltc verifies hashes</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

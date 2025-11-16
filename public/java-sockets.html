@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Socket Programming 101</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        h3 { color: #667eea; margin-top: 20px; }
+        .code-block {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .note {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #856404;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Java Socket Programming 101</h1>
+
+        <p>Sockets are the foundation of network programming. They provide a way for processes to communicate across a network using TCP/IP.</p>
+
+        <h2>ServerSocket: Listening for Connections</h2>
+
+        <p>A <code>ServerSocket</code> listens on a port and accepts incoming connections:</p>
+
+        <div class="code-block">// Create a server socket bound to port 8080
+ServerSocket serverSocket = new ServerSocket(8080);
+System.out.println("Server listening on port 8080");
+
+while (true) {
+    // accept() blocks until a client connects
+    Socket clientSocket = serverSocket.accept();
+
+    // Now we have a connection!
+    handleConnection(clientSocket);
+}</div>
+
+        <div class="note">
+            <strong>💡 Key Point:</strong> <code>accept()</code> is a blocking call - it waits until a client connects. This is why servers run in a loop: accept a connection, handle it, accept the next one.
+        </div>
+
+        <h2>Socket: The Connection</h2>
+
+        <p>Once <code>accept()</code> returns, you have a <code>Socket</code> representing the client connection:</p>
+
+        <div class="code-block">Socket clientSocket = serverSocket.accept();
+
+// Get input stream (read from client)
+InputStream in = clientSocket.getInputStream();
+
+// Get output stream (write to client)
+OutputStream out = clientSocket.getOutputStream();
+
+// When done, close the socket
+clientSocket.close();</div>
+
+        <h2>Reading from a Socket</h2>
+
+        <h3>Option 1: Raw InputStream</h3>
+        <div class="code-block">InputStream in = socket.getInputStream();
+byte[] buffer = new byte[1024];
+int bytesRead = in.read(buffer);  // Blocks until data arrives</div>
+
+        <p><strong>Problem:</strong> Reading bytes is tedious for text-based protocols like HTTP.</p>
+
+        <h3>Option 2: BufferedReader (Better for HTTP)</h3>
+        <div class="code-block">BufferedReader in = new BufferedReader(
+    new InputStreamReader(socket.getInputStream())
+);
+
+// Read one line at a time
+String line = in.readLine();  // Reads until \n or \r\n</div>
+
+        <p><strong>Perfect for HTTP!</strong> HTTP headers are line-based, so <code>readLine()</code> is ideal.</p>
+
+        <div class="warning">
+            <strong>⚠️ Important:</strong> <code>readLine()</code> blocks until it reads a complete line or the connection closes. It returns <code>null</code> if the connection is closed.
+        </div>
+
+        <h2>Writing to a Socket</h2>
+
+        <h3>Option 1: Raw OutputStream</h3>
+        <div class="code-block">OutputStream out = socket.getOutputStream();
+byte[] data = "Hello".getBytes();
+out.write(data);
+out.flush();  // Ensure data is sent immediately!</div>
+
+        <h3>Option 2: PrintWriter (Better for HTTP)</h3>
+        <div class="code-block">PrintWriter writer = new PrintWriter(socket.getOutputStream(), false);
+
+// Write HTTP response line
+writer.print("HTTP/1.1 200 OK\r\n");
+writer.print("Content-Type: text/plain\r\n");
+writer.print("\r\n");
+
+// Must flush to send!
+writer.flush();</div>
+
+        <p><strong>Note:</strong> The second parameter <code>false</code> disables auto-flush. We want manual control to batch writes efficiently.</p>
+
+        <h2>The Critical Importance of flush()</h2>
+
+        <p>Data written to streams is often <strong>buffered</strong> for efficiency:</p>
+
+        <div class="code-block">writer.print("HTTP/1.1 200 OK\r\n");
+writer.print("Content-Length: 13\r\n");
+writer.print("\r\n");
+
+// ❌ WITHOUT flush():
+// Data sits in buffer, not sent to client!
+// Client waits forever...
+
+// ✅ WITH flush():
+writer.flush();
+// Data is sent immediately over the network</div>
+
+        <div class="warning">
+            <strong>⚠️ Common Mistake:</strong> Forgetting to <code>flush()</code> after writing headers. The client will hang waiting for a response that's stuck in the buffer!
+        </div>
+
+        <h2>When to Use Each Stream Type</h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr style="background: #667eea; color: white;">
+                <th style="border: 1px solid #ddd; padding: 12px;">Stream Type</th>
+                <th style="border: 1px solid #ddd; padding: 12px;">Use When</th>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 12px;"><strong>BufferedReader</strong></td>
+                <td style="border: 1px solid #ddd; padding: 12px;">Reading HTTP headers (line-based text)</td>
+            </tr>
+            <tr style="background: #f8f9fa;">
+                <td style="border: 1px solid #ddd; padding: 12px;"><strong>InputStream</strong></td>
+                <td style="border: 1px solid #ddd; padding: 12px;">Reading request body (binary data)</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 12px;"><strong>PrintWriter</strong></td>
+                <td style="border: 1px solid #ddd; padding: 12px;">Writing HTTP headers (text)</td>
+            </tr>
+            <tr style="background: #f8f9fa;">
+                <td style="border: 1px solid #ddd; padding: 12px;"><strong>OutputStream</strong></td>
+                <td style="border: 1px solid #ddd; padding: 12px;">Writing response body (binary data)</td>
+            </tr>
+        </table>
+
+        <h2>Server Structure (Conceptual Overview)</h2>
+
+        <p>A basic HTTP server follows this pattern:</p>
+
+        <div class="code-block">// Conceptual flow - you'll implement the details!
+try (ServerSocket server = new ServerSocket(port)) {
+    while (true) {
+        Socket client = server.accept();
+
+        // 1. Create input/output streams
+        // 2. Read and parse request line
+        // 3. Read and parse headers (loop until blank line)
+        // 4. Validate request
+        // 5. Build and send HTTP response
+        // 6. Close socket (or keep alive for reuse)
+
+        handleConnection(client);
+    }
+}</div>
+
+        <div class="note">
+            <strong>💡 Your Task:</strong> You'll implement each of these steps using the socket operations shown above. Refer to the HTTP Request/Response tutorial for the protocol details.
+        </div>
+
+        <h2>Resource Management with try-with-resources</h2>
+
+        <p>Always close sockets to free up resources:</p>
+
+        <div class="code-block">// ✅ GOOD: Automatic cleanup
+try (Socket socket = serverSocket.accept()) {
+    handleConnection(socket);
+}  // Socket automatically closed
+
+// ❌ BAD: Manual cleanup (easy to forget!)
+Socket socket = serverSocket.accept();
+handleConnection(socket);
+socket.close();  // What if exception occurs before this?</div>
+
+        <h2>Common Socket Operations</h2>
+
+        <div class="code-block">Socket socket = ...;
+
+// Set timeout for reads (throws SocketTimeoutException)
+socket.setSoTimeout(5000);  // 5 seconds
+
+// Disable Nagle's algorithm (send small packets immediately)
+socket.setTcpNoDelay(true);
+
+// Allow address reuse (useful for servers)
+socket.setReuseAddress(true);
+
+// Check if connection is closed
+boolean closed = socket.isClosed();
+
+// Get remote address
+InetAddress remoteAddr = socket.getInetAddress();</div>
+
+        <h2>Blocking vs Non-Blocking</h2>
+
+        <p>Java sockets are <strong>blocking</strong> by default:</p>
+
+        <ul>
+            <li><code>accept()</code> blocks until a client connects</li>
+            <li><code>read()</code> blocks until data arrives</li>
+            <li><code>readLine()</code> blocks until a complete line is received</li>
+        </ul>
+
+        <p>This is actually <strong>good</strong> for simple servers - your code is straightforward. With virtual threads, blocking is cheap!</p>
+
+        <div class="note">
+            <strong>💡 Virtual Threads:</strong> In Java 21+, you can handle thousands of concurrent connections efficiently even with blocking I/O by using virtual threads. Each connection gets its own lightweight thread.
+        </div>
+
+        <h2>Error Handling</h2>
+
+        <div class="code-block">try {
+    Socket socket = serverSocket.accept();
+    handleConnection(socket);
+} catch (SocketTimeoutException e) {
+    // Read timed out - connection idle too long
+    System.out.println("Connection timeout");
+} catch (IOException e) {
+    // Network error (connection reset, etc.)
+    System.err.println("I/O error: " + e.getMessage());
+} finally {
+    socket.close();  // Always clean up
+}</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="socket-timeouts.html">Socket Timeouts Explained</a> - setSoTimeout() in depth</li>
+                <li><a href="virtual-threads.html">Java Virtual Threads</a> - Scalable concurrency</li>
+                <li><a href="http-request-response.html">HTTP Request/Response</a> - What to do with sockets</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

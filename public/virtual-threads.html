@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Virtual Threads</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Java Virtual Threads Explained</h1>
+
+        <p>Virtual threads (introduced in Java 21) are lightweight threads that make concurrent programming simple and scalable. They're perfect for I/O-heavy applications like web servers.</p>
+
+        <h2>Platform Threads vs Virtual Threads</h2>
+
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Platform Threads</th>
+                <th>Virtual Threads</th>
+            </tr>
+            <tr>
+                <td><strong>Creation Cost</strong></td>
+                <td>Expensive (~1MB stack)</td>
+                <td>Cheap (~few KB)</td>
+            </tr>
+            <tr>
+                <td><strong>Max Count</strong></td>
+                <td>Thousands</td>
+                <td>Millions</td>
+            </tr>
+            <tr>
+                <td><strong>Blocking I/O</strong></td>
+                <td>Wastes OS thread</td>
+                <td>No problem!</td>
+            </tr>
+            <tr>
+                <td><strong>Use Case</strong></td>
+                <td>CPU-intensive work</td>
+                <td>I/O-intensive work (our server!)</td>
+            </tr>
+        </table>
+
+        <h2>Creating Virtual Threads</h2>
+
+        <div class="code-block">// Platform thread (old way)
+Thread platformThread = new Thread(() -> {
+    handleConnection(socket);
+});
+platformThread.start();
+
+// Virtual thread (new way!)
+Thread virtualThread = Thread.ofVirtual().start(() -> {
+    handleConnection(socket);
+});</div>
+
+        <p>That's it! Same API, just use <code>Thread.ofVirtual()</code> instead of <code>new Thread()</code>.</p>
+
+        <h2>Why Virtual Threads Matter for Servers</h2>
+
+        <p>Web servers spend most of their time <strong>waiting</strong>:</p>
+        <ul>
+            <li>Waiting for client to send request</li>
+            <li>Waiting to read file from disk</li>
+            <li>Waiting to write response over network</li>
+        </ul>
+
+        <p>With platform threads, each waiting thread wastes an OS thread. With virtual threads, the JVM automatically unmounts the virtual thread when it blocks, freeing the underlying OS thread for other work.</p>
+
+        <div class="note">
+            <strong>💡 Key Insight:</strong> Virtual threads make blocking I/O cheap. You can write simple, synchronous code and still handle thousands of concurrent connections!
+        </div>
+
+        <h2>Our Server with Virtual Threads</h2>
+
+        <div class="code-block">// Server loop
+while (true) {
+    Socket clientSocket = serverSocket.accept();
+
+    if (threaded) {
+        // Create virtual thread per connection
+        Thread.ofVirtual().start(() -> {
+            try {
+                handleConnection(clientSocket);
+            } finally {
+                clientSocket.close();
+            }
+        });
+    } else {
+        // Single-threaded (one request at a time)
+        handleConnection(clientSocket);
+        clientSocket.close();
+    }
+}</div>
+
+        <h2>Performance Comparison</h2>
+
+        <div class="code-block"># Single-threaded server
+java lts.java 8080
+# Can only handle 1 request at a time
+# 100 requests = processed sequentially
+
+# Virtual-threaded server
+java lts.java -t 8080
+# Can handle many requests concurrently
+# 100 requests = processed in parallel</div>
+
+        <h2>When Blocking is Good</h2>
+
+        <p>With virtual threads, you can write simple blocking code:</p>
+
+        <div class="code-block">// This code is SIMPLE but SCALES
+String line = in.readLine();  // Blocks, but that's OK!
+// Virtual thread unmounts, OS thread does other work
+
+// Process request...
+
+out.write(response);  // Blocks, but that's OK!
+// Virtual thread unmounts again</div>
+
+        <p>No callbacks, no async/await, no complexity. Just straightforward code that scales!</p>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="java-sockets.html">Java Socket Programming</a> - How sockets work</li>
+                <li><a href="load-testing.html">Load Testing</a> - Testing concurrent performance</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

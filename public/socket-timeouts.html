@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket Timeouts Explained</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        h3 { color: #667eea; margin-top: 20px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #856404; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Socket Timeouts: How They Work</h1>
+
+        <p>Socket timeouts prevent your server from waiting forever on slow or unresponsive clients. Understanding when and how timeouts fire is critical for building robust servers.</p>
+
+        <h2>What is setSoTimeout()?</h2>
+
+        <div class="code-block">Socket socket = ...;
+
+// Set a 5-second timeout
+socket.setSoTimeout(5000);  // Milliseconds
+
+// Set infinite timeout (wait forever)
+socket.setSoTimeout(0);  // Default</div>
+
+        <p><strong>What it does:</strong> Sets the maximum time a <code>read()</code> operation will wait for data before throwing <code>SocketTimeoutException</code>.</p>
+
+        <h2>When Does Timeout Fire?</h2>
+
+        <p>The timeout applies to <strong>all read operations</strong> on the socket:</p>
+
+        <div class="code-block">socket.setSoTimeout(5000);  // 5 second timeout
+
+// Timeout applies to:
+in.readLine();           // ✅ Times out if no line arrives
+in.read(buffer);         // ✅ Times out if no data arrives
+in.read();               // ✅ Times out if no byte arrives</div>
+
+        <div class="warning">
+            <strong>⚠️ Critical:</strong> The timeout applies to <strong>each read operation</strong>, not to the entire request. If data keeps arriving, the timeout keeps resetting!
+        </div>
+
+        <h2>Example: Keep-Alive Timeout</h2>
+
+        <p>In our server, we use timeout to close idle keep-alive connections:</p>
+
+        <div class="code-block">socket.setSoTimeout(keepAliveTimeout * 1000);
+
+while (true) {
+    try {
+        // Wait for next request line (with timeout)
+        String requestLine = in.readLine();
+
+        if (requestLine == null) {
+            break;  // Client closed connection
+        }
+
+        // Process request and send response...
+
+    } catch (SocketTimeoutException e) {
+        // No request received within timeout period
+        System.out.println("Keep-alive timeout, closing connection");
+        break;
+    }
+}</div>
+
+        <h2>Timeout vs Connection Close</h2>
+
+        <table>
+            <tr>
+                <th>Scenario</th>
+                <th>readLine() returns</th>
+                <th>What happened</th>
+            </tr>
+            <tr>
+                <td>Client sends data</td>
+                <td>The line as a String</td>
+                <td>Normal operation</td>
+            </tr>
+            <tr>
+                <td>Client closes connection</td>
+                <td><code>null</code></td>
+                <td>End of stream reached</td>
+            </tr>
+            <tr>
+                <td>Timeout expires</td>
+                <td>Throws <code>SocketTimeoutException</code></td>
+                <td>No data arrived in time</td>
+            </tr>
+        </table>
+
+        <h2>Choosing the Right Timeout Value</h2>
+
+        <table>
+            <tr>
+                <th>Timeout</th>
+                <th>Effect</th>
+                <th>Use Case</th>
+            </tr>
+            <tr>
+                <td><strong>0 (infinite)</strong></td>
+                <td>Never times out, waits forever</td>
+                <td>Single request per connection (no keep-alive)</td>
+            </tr>
+            <tr>
+                <td><strong>1-2 seconds</strong></td>
+                <td>Very aggressive</td>
+                <td>Fast local networks, small payloads only</td>
+            </tr>
+            <tr>
+                <td><strong>5-15 seconds</strong></td>
+                <td>Balanced</td>
+                <td>General purpose keep-alive (Apache default: 5s)</td>
+            </tr>
+            <tr>
+                <td><strong>30-75 seconds</strong></td>
+                <td>Patient</td>
+                <td>Slower clients, large transfers (Nginx default: 75s)</td>
+            </tr>
+        </table>
+
+        <div class="warning">
+            <strong>⚠️ Important for Large Payloads:</strong> The timeout must be long enough to transfer your entire response! With a 1-second timeout and a 100MB payload taking 2-3 seconds to send, the socket will timeout <strong>during</strong> the transfer, not just during idle periods.
+        </div>
+
+        <h2>Timeout During Data Transfer</h2>
+
+        <p>Consider this scenario:</p>
+
+        <div class="code-block">socket.setSoTimeout(1000);  // 1 second timeout
+
+// Server sends 100MB response (takes 2 seconds)
+out.write(payload);  // 100MB
+out.flush();
+
+// Server loops back and waits for next request
+String nextRequest = in.readLine();  // TIMEOUT!
+// Why? Transfer took 2s, client still receiving,
+// hasn't sent next request yet</div>
+
+        <p>The timeout fired because the client needs time to:</p>
+        <ol>
+            <li>Receive the full 100MB (network speed)</li>
+            <li>Process the response</li>
+            <li>Send the next request</li>
+        </ol>
+
+        <p>If this total time > timeout, the server closes the connection prematurely.</p>
+
+        <div class="note">
+            <strong>💡 Solution:</strong> Use a realistic timeout (5+ seconds) that accounts for network speed and payload size. Don't use 1-second timeouts with large payloads!
+        </div>
+
+        <h2>Error Handling</h2>
+
+        <div class="code-block">try {
+    socket.setSoTimeout(5000);
+
+    String line = in.readLine();
+
+    // Process line...
+
+} catch (SocketTimeoutException e) {
+    // Timeout occurred - connection idle
+    System.out.println("Client idle, closing connection");
+
+} catch (IOException e) {
+    // Other I/O error (connection reset, etc.)
+    System.err.println("I/O error: " + e.getMessage());
+
+} finally {
+    socket.close();
+}</div>
+
+        <h2>Common Pitfalls</h2>
+
+        <h3>1. Setting Timeout Too Late</h3>
+        <div class="code-block">// ❌ BAD: Timeout set AFTER starting to read
+String line = in.readLine();  // Waits forever!
+socket.setSoTimeout(5000);    // Too late
+
+// ✅ GOOD: Timeout set BEFORE reading
+socket.setSoTimeout(5000);
+String line = in.readLine();  // Times out after 5s</div>
+
+        <h3>2. Forgetting Timeout is in Milliseconds</h3>
+        <div class="code-block">// ❌ BAD: 5-second timeout? No, 5 milliseconds!
+socket.setSoTimeout(5);
+
+// ✅ GOOD: Multiply seconds by 1000
+socket.setSoTimeout(5 * 1000);  // 5 seconds</div>
+
+        <h3>3. Timeout Too Short for Operation</h3>
+        <div class="code-block">// ❌ BAD: 1s timeout with 100MB payload
+socket.setSoTimeout(1000);
+// Transfer takes 3s → timeout fires mid-transfer
+
+// ✅ GOOD: Generous timeout for large data
+socket.setSoTimeout(30000);  // 30s for large transfers</div>
+
+        <h2>Testing Timeout Behavior</h2>
+
+        <p>Test timeouts using the client's delay parameter:</p>
+
+        <div class="code-block"># Server with 1-second timeout
+java lts.java -k 1 8080
+
+# Client: send requests, then wait 2 seconds
+java ltc.java -c 5 -r 5 -d 2
+
+# Expected: Server logs "Keep-alive timeout" after 1 second
+# Client delay (2s) > server timeout (1s)</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="java-sockets.html">Java Socket Programming</a> - Socket basics</li>
+                <li><a href="http-keep-alive.html">HTTP Keep-Alive</a> - Why timeouts matter</li>
+                <li><a href="load-testing.html">Load Testing</a> - Testing timeout behavior</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

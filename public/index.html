@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Test Server - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .command-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .command-box code {
+            color: #333;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .option-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #764ba2;
+        }
+
+        .option-card strong {
+            color: #667eea;
+        }
+
+        .echo-tester {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .test-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .test-link {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            transition: background 0.3s;
+        }
+
+        .test-link:hover {
+            background: #764ba2;
+        }
+
+        .tutorials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .tutorial-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .tutorial-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .tutorial-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .tutorial-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .category-label {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Load Test Server</h1>
+            <p class="subtitle">A Java-based HTTP server with keep-alive support and virtual threading</p>
+        </header>
+
+        <section class="section">
+            <h2>📖 About This Server</h2>
+            <p>Welcome to the Load Test Server! This is a lightweight HTTP/1.1 server built in Java that demonstrates core networking concepts including keep-alive connections, virtual threading, and efficient request handling. It's designed for learning and performance testing.</p>
+        </section>
+
+        <section class="section">
+            <h2>⚙️ Command-Line Usage</h2>
+            <div class="command-box">
+                <code>java lts.java [options] [port]</code>
+            </div>
+
+            <div class="options-grid">
+                <div class="option-card">
+                    <strong>-t</strong><br>
+                    Enable virtual threading for high-concurrency handling
+                </div>
+                <div class="option-card">
+                    <strong>-q</strong><br>
+                    Quiet mode - disable per-request logging
+                </div>
+                <div class="option-card">
+                    <strong>-k [timeout]</strong><br>
+                    Enable keep-alive (default: 5s timeout)
+                </div>
+                <div class="option-card">
+                    <strong>-h, --help</strong><br>
+                    Show help message with examples
+                </div>
+            </div>
+
+            <h3>Example Commands:</h3>
+            <div class="command-box">
+                <code>java lts.java 8080</code><br>
+                Start server on port 8080
+            </div>
+            <div class="command-box">
+                <code>java lts.java -t -k 30 8080</code><br>
+                Start with virtual threading and 30-second keep-alive timeout
+            </div>
+            <div class="command-box">
+                <code>java lts.java -t -k -q 8080</code><br>
+                High-performance mode: threaded, keep-alive, and quiet
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>🔧 Load Test Client (ltc.java)</h2>
+            <p>A complete, working HTTP load testing client is provided with full source code. Use it to test your server implementation and learn how clients handle HTTP keep-alive.</p>
+
+            <h3>What It Does:</h3>
+            <ul>
+                <li><strong>Creates multiple concurrent connections</strong> using Java virtual threads</li>
+                <li><strong>Sends configurable requests per connection</strong> to test keep-alive behavior</li>
+                <li><strong>Verifies payload integrity</strong> using SHA-256 hash comparison</li>
+                <li><strong>Reports performance metrics</strong> including latency percentiles and throughput</li>
+                <li><strong>Supports connection reuse</strong> with the Connection: keep-alive header</li>
+            </ul>
+
+            <h3>Command-Line Usage:</h3>
+            <div class="command-box">
+                <code>java ltc.java [options]</code>
+            </div>
+
+            <div class="options-grid">
+                <div class="option-card">
+                    <strong>-c &lt;count&gt;</strong><br>
+                    Number of connections (default: 10)
+                </div>
+                <div class="option-card">
+                    <strong>-r &lt;count&gt;</strong><br>
+                    Requests per connection (default: 1)
+                </div>
+                <div class="option-card">
+                    <strong>-s &lt;bytes&gt;</strong><br>
+                    Payload size in bytes (default: 1000)
+                </div>
+                <div class="option-card">
+                    <strong>-d &lt;seconds&gt;</strong><br>
+                    Delay before closing (for testing timeouts)
+                </div>
+                <div class="option-card">
+                    <strong>-h &lt;host&gt;</strong><br>
+                    Target host (default: localhost)
+                </div>
+                <div class="option-card">
+                    <strong>-p &lt;port&gt;</strong><br>
+                    Target port (default: 8080)
+                </div>
+            </div>
+
+            <h3>Example Usage:</h3>
+            <div class="command-box">
+                <code>java ltc.java -c 10 -r 100</code><br>
+                10 connections, 100 requests each (1000 total requests)
+            </div>
+            <div class="command-box">
+                <code>java ltc.java -c 1000 -r 100 -s 10000</code><br>
+                High-volume test: 100,000 requests with 10KB payloads
+            </div>
+            <div class="command-box">
+                <code>java ltc.java -c 5 -r 5 -d 2</code><br>
+                Test server timeout: 5 connections, wait 2 seconds after requests
+            </div>
+
+            <h3>Why You Get The Full Source:</h3>
+            <ul>
+                <li><strong>Reference implementation:</strong> See how a client implements keep-alive correctly</li>
+                <li><strong>Reliable testing tool:</strong> Focus on building your server, not debugging your test client</li>
+                <li><strong>Learn both sides:</strong> Understanding client behavior helps you build a better server</li>
+                <li><strong>Hash verification example:</strong> See how to verify data integrity in practice</li>
+            </ul>
+
+            <p style="background: #fff3cd; padding: 15px; border-left: 4px solid #856404; margin-top: 15px;">
+                <strong>💡 Tip:</strong> Read through ltc.java to understand how it handles connection reuse, timeout detection, and hash verification. The patterns you see there will help you implement similar features in your server!
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>🧪 Echo Endpoint Tester</h2>
+            <div class="echo-tester">
+                <p><strong>Test the /echo/{size} endpoint</strong> - Click any link below to open a new tab with a test request. The server will generate a payload of the specified size with SHA-256 hash verification.</p>
+
+                <div class="test-links">
+                    <a href="/echo/100" target="_blank" class="test-link">100 bytes</a>
+                    <a href="/echo/1000" target="_blank" class="test-link">1 KB</a>
+                    <a href="/echo/10000" target="_blank" class="test-link">10 KB</a>
+                    <a href="/echo/100000" target="_blank" class="test-link">100 KB</a>
+                    <a href="/echo/1000000" target="_blank" class="test-link">1 MB</a>
+                    <a href="/echo/10000000" target="_blank" class="test-link">10 MB</a>
+                    <a href="/echo/50000000" target="_blank" class="test-link">50 MB</a>
+                    <a href="/echo/100000000" target="_blank" class="test-link">100 MB (max)</a>
+                </div>
+
+                <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                    💡 Tip: Open your browser's Network tab (F12) to see headers, timing, and the X-Payload-Hash!
+                </p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📚 Learning Resources</h2>
+            <p>Dive deep into the concepts behind this server with these tutorials:</p>
+
+            <h3 style="margin-top: 30px; color: #764ba2;">HTTP Protocol</h3>
+            <div class="tutorials-grid">
+                <a href="http-request-response.html" class="tutorial-card">
+                    <span class="category-label">HTTP</span>
+                    <h3>HTTP Request/Response Anatomy</h3>
+                    <p>Breaking down request lines, headers, status codes, and body structure</p>
+                </a>
+                <a href="http-keep-alive.html" class="tutorial-card">
+                    <span class="category-label">HTTP</span>
+                    <h3>HTTP Keep-Alive Deep Dive</h3>
+                    <p>Understanding persistent connections, timeouts, and the Connection header</p>
+                </a>
+                <a href="http-headers.html" class="tutorial-card">
+                    <span class="category-label">HTTP</span>
+                    <h3>HTTP Headers Reference</h3>
+                    <p>Essential headers: Content-Type, Content-Length, Connection, and custom headers</p>
+                </a>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #764ba2;">Java Networking</h3>
+            <div class="tutorials-grid">
+                <a href="java-sockets.html" class="tutorial-card">
+                    <span class="category-label">Java</span>
+                    <h3>Java Socket Programming 101</h3>
+                    <p>ServerSocket, accept(), reading/writing streams, and when to flush()</p>
+                </a>
+                <a href="socket-timeouts.html" class="tutorial-card">
+                    <span class="category-label">Java</span>
+                    <h3>Socket Timeouts Explained</h3>
+                    <p>setSoTimeout(), SocketTimeoutException, and timeout behavior</p>
+                </a>
+                <a href="virtual-threads.html" class="tutorial-card">
+                    <span class="category-label">Java</span>
+                    <h3>Java Virtual Threads</h3>
+                    <p>Platform vs virtual threads, Thread.ofVirtual(), and concurrency made simple</p>
+                </a>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #764ba2;">TCP & Performance</h3>
+            <div class="tutorials-grid">
+                <a href="tcp-lifecycle.html" class="tutorial-card">
+                    <span class="category-label">TCP</span>
+                    <h3>TCP Connection Lifecycle</h3>
+                    <p>3-way handshake, TIME_WAIT state, and port exhaustion explained</p>
+                </a>
+                <a href="keep-alive-performance.html" class="tutorial-card">
+                    <span class="category-label">Performance</span>
+                    <h3>Why Keep-Alive Improves Performance</h3>
+                    <p>Connection overhead, latency savings, and real-world benchmarks</p>
+                </a>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #764ba2;">Testing & Debugging</h3>
+            <div class="tutorials-grid">
+                <a href="testing-curl.html" class="tutorial-card">
+                    <span class="category-label">Testing</span>
+                    <h3>Testing with curl</h3>
+                    <p>Command-line HTTP testing, viewing headers, and debugging connections</p>
+                </a>
+                <a href="browser-devtools.html" class="tutorial-card">
+                    <span class="category-label">Testing</span>
+                    <h3>Browser DevTools for HTTP</h3>
+                    <p>Network tab, headers, connection reuse, and timing analysis</p>
+                </a>
+                <a href="load-testing.html" class="tutorial-card">
+                    <span class="category-label">Testing</span>
+                    <h3>Load Testing Concepts</h3>
+                    <p>Understanding connections, RPS, latency percentiles, and ltc.java output</p>
+                </a>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #764ba2;">Implementation</h3>
+            <div class="tutorials-grid">
+                <a href="parsing-requests.html" class="tutorial-card">
+                    <span class="category-label">Implementation</span>
+                    <h3>Parsing HTTP Requests</h3>
+                    <p>Splitting request lines, header parsing, and handling malformed input</p>
+                </a>
+                <a href="static-files.html" class="tutorial-card">
+                    <span class="category-label">Implementation</span>
+                    <h3>Static File Serving</h3>
+                    <p>Path security, Content-Type detection, and custom error pages</p>
+                </a>
+                <a href="hash-verification.html" class="tutorial-card">
+                    <span class="category-label">Implementation</span>
+                    <h3>Hash Verification & Data Integrity</h3>
+                    <p>SHA-256, payload verification, and deterministic data generation</p>
+                </a>
+                <a href="security-basics.html" class="tutorial-card">
+                    <span class="category-label">Security</span>
+                    <h3>Web Server Security Basics</h3>
+                    <p>Directory traversal, DoS prevention, input validation, and safe errors</p>
+                </a>
+            </div>
+        </section>
+
+        <footer>
+            <p>🎓 Built for learning networking concepts | Java HTTP/1.1 Server</p>
+        </footer>
+    </div>
+</body>
+</html>

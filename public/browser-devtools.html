@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser DevTools for HTTP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Browser DevTools for HTTP</h1>
+
+        <p>Modern browsers have powerful developer tools for inspecting HTTP traffic. Press <strong>F12</strong> to open DevTools in most browsers.</p>
+
+        <h2>Opening the Network Tab</h2>
+
+        <ol>
+            <li>Press <strong>F12</strong> (or Ctrl+Shift+I / Cmd+Option+I)</li>
+            <li>Click the <strong>Network</strong> tab</li>
+            <li>Refresh the page or make requests</li>
+            <li>Click on any request to see details</li>
+        </ol>
+
+        <h2>What You Can See</h2>
+
+        <h3>Request Headers</h3>
+        <p>View all headers your browser sent:</p>
+        <ul>
+            <li>Host, User-Agent, Accept headers</li>
+            <li>Connection header (keep-alive or close)</li>
+            <li>Custom headers if any</li>
+        </ul>
+
+        <h3>Response Headers</h3>
+        <p>View all headers the server sent:</p>
+        <ul>
+            <li>Status code (200, 404, etc.)</li>
+            <li>Content-Type, Content-Length</li>
+            <li>Connection header</li>
+            <li>Custom headers like X-Payload-Hash</li>
+        </ul>
+
+        <h3>Timing Breakdown</h3>
+        <p>See exactly where time is spent:</p>
+        <ul>
+            <li><strong>DNS Lookup:</strong> Time to resolve hostname</li>
+            <li><strong>Connecting:</strong> TCP handshake time</li>
+            <li><strong>Waiting (TTFB):</strong> Time to first byte</li>
+            <li><strong>Content Download:</strong> Time to download response</li>
+        </ul>
+
+        <h2>Testing the Echo Endpoint</h2>
+
+        <ol>
+            <li>Open DevTools Network tab</li>
+            <li>Click one of the <a href="index.html#echo-tester">echo test links</a> on the home page</li>
+            <li>In Network tab, click the <code>/echo/...</code> request</li>
+            <li>View headers, timing, and the X-Payload-Hash!</li>
+        </ol>
+
+        <h2>Observing Keep-Alive</h2>
+
+        <p>Look for the <strong>Connection ID</strong> column in Chrome DevTools:</p>
+
+        <ul>
+            <li>Same Connection ID = requests reused same TCP connection</li>
+            <li>Different Connection ID = new TCP connection for each</li>
+        </ul>
+
+        <div class="note">
+            <strong>💡 Tip:</strong> Right-click the Network tab header bar and enable "Connection ID" column to see connection reuse in action!
+        </div>
+
+        <h2>Testing Different Scenarios</h2>
+
+        <div class="code-block"># Start server with keep-alive
+java lts.java -k 30 8080
+
+# In browser:
+1. Open DevTools Network tab
+2. Visit http://localhost:8080/
+3. Click multiple echo test links rapidly
+4. Observe connection reuse (same Connection ID)
+
+# Restart server WITHOUT keep-alive
+java lts.java 8080
+
+# In browser:
+1. Clear network tab (trash icon)
+2. Click multiple echo test links
+3. Each request uses new connection</div>
+
+        <h2>Useful Keyboard Shortcuts</h2>
+
+        <ul>
+            <li><strong>F12:</strong> Open/close DevTools</li>
+            <li><strong>Ctrl+R:</strong> Refresh page</li>
+            <li><strong>Ctrl+Shift+R:</strong> Hard refresh (bypass cache)</li>
+            <li><strong>Escape:</strong> Toggle console drawer</li>
+        </ul>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="http-headers.html">HTTP Headers Reference</a></li>
+                <li><a href="testing-curl.html">Testing with curl</a></li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static File Serving</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #856404; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Static File Serving</h1>
+
+        <p>Serving static files (HTML, CSS, images) is a fundamental web server capability. Security and correct Content-Type handling are critical.</p>
+
+        <h2>Basic File Serving</h2>
+
+        <div class="code-block">// Map URL path to file path
+String path = "/index.html";
+Path filePath = Paths.get("public", path);
+
+// Read the file
+byte[] content = Files.readAllBytes(filePath);
+
+// Send response
+writer.print("HTTP/1.1 200 OK\r\n");
+writer.print("Content-Type: text/html\r\n");
+writer.print("Content-Length: " + content.length + "\r\n");
+writer.print("\r\n");
+writer.flush();
+
+out.write(content);
+out.flush();</div>
+
+        <h2>Security: Directory Traversal Attack</h2>
+
+        <div class="warning">
+            <strong>⚠️ Critical Vulnerability:</strong> Never trust the path from the URL!
+        </div>
+
+        <div class="code-block">// ❌ INSECURE: Client can request any file!
+GET /../../../etc/passwd HTTP/1.1
+
+// Server naively maps this to:
+Path filePath = Paths.get("public", "/../../../etc/passwd");
+// Resolves to: /etc/passwd - SECURITY BREACH!
+
+// ✅ SECURE: Check for ".." in path
+if (path.contains("..")) {
+    sendError(out, 403, "Forbidden");
+    return;
+}</div>
+
+        <h2>Content-Type Detection</h2>
+
+        <p>Set the correct Content-Type based on file extension:</p>
+
+        <div class="code-block">private String guessContentType(String path) {
+    if (path.endsWith(".html") || path.endsWith(".htm")) {
+        return "text/html";
+    } else if (path.endsWith(".css")) {
+        return "text/css";
+    } else if (path.endsWith(".js")) {
+        return "application/javascript";
+    } else if (path.endsWith(".json")) {
+        return "application/json";
+    } else if (path.endsWith(".txt")) {
+        return "text/plain";
+    } else if (path.endsWith(".png")) {
+        return "image/png";
+    } else if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+        return "image/jpeg";
+    }
+    return "application/octet-stream";
+}</div>
+
+        <table>
+            <tr>
+                <th>File Type</th>
+                <th>Content-Type</th>
+            </tr>
+            <tr>
+                <td>.html, .htm</td>
+                <td>text/html</td>
+            </tr>
+            <tr>
+                <td>.css</td>
+                <td>text/css</td>
+            </tr>
+            <tr>
+                <td>.js</td>
+                <td>application/javascript</td>
+            </tr>
+            <tr>
+                <td>.json</td>
+                <td>application/json</td>
+            </tr>
+            <tr>
+                <td>.png</td>
+                <td>image/png</td>
+            </tr>
+            <tr>
+                <td>.jpg, .jpeg</td>
+                <td>image/jpeg</td>
+            </tr>
+            <tr>
+                <td>Unknown</td>
+                <td>application/octet-stream</td>
+            </tr>
+        </table>
+
+        <h2>Default to index.html</h2>
+
+        <div class="code-block">// If path is "/", serve "/index.html"
+if (path.equals("/")) {
+    path = "/index.html";
+}</div>
+
+        <h2>Custom 404 Pages</h2>
+
+        <div class="code-block">if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+    // Try to serve custom 404 page
+    Path notFoundPath = Paths.get("public", "404.html");
+
+    if (Files.exists(notFoundPath)) {
+        byte[] content = Files.readAllBytes(notFoundPath);
+
+        writer.print("HTTP/1.1 404 Not Found\r\n");
+        writer.print("Content-Type: text/html\r\n");
+        writer.print("Content-Length: " + content.length + "\r\n");
+        writer.print("\r\n");
+        writer.flush();
+
+        out.write(content);
+        out.flush();
+    } else {
+        sendError(out, 404, "Not Found");
+    }
+    return;
+}</div>
+
+        <h2>File Reading Best Practices</h2>
+
+        <div class="code-block">// ✅ GOOD: Use Files.readAllBytes() for small files
+byte[] content = Files.readAllBytes(filePath);
+
+// For large files, consider streaming:
+// Files.copy(filePath, out);
+
+// Always check file exists and is regular file
+if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+    sendError(out, 404, "Not Found");
+    return;
+}</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="security-basics.html">Web Server Security Basics</a></li>
+                <li><a href="http-headers.html">HTTP Headers Reference</a></li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parsing HTTP Requests</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #856404; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Parsing HTTP Requests</h1>
+
+        <p>Robust request parsing is critical for a web server. You must handle both valid and malformed input gracefully.</p>
+
+        <h2>Parsing the Request Line</h2>
+
+        <div class="code-block">String requestLine = in.readLine();
+
+// Example: "GET /echo/1000 HTTP/1.1"
+String[] parts = requestLine.split(" ");
+
+if (parts.length < 2) {
+    sendError(out, 400, "Bad Request");
+    return;
+}
+
+String method = parts[0];      // "GET"
+String path = parts[1];        // "/echo/1000"
+String version = parts[2];     // "HTTP/1.1" (if present)</div>
+
+        <div class="warning">
+            <strong>⚠️ Edge Cases:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><code>requestLine</code> could be <code>null</code> (client closed)</li>
+                <li><code>requestLine</code> could be empty</li>
+                <li>Parts array might have fewer than 3 elements</li>
+                <li>Method could be anything (POST, DELETE, invalid)</li>
+            </ul>
+        </div>
+
+        <h2>Parsing Headers</h2>
+
+        <div class="code-block">Map&lt;String, String&gt; headers = new HashMap&lt;&gt;();
+String line;
+
+while ((line = in.readLine()) != null && !line.isEmpty()) {
+    int colonIndex = line.indexOf(':');
+
+    if (colonIndex > 0) {
+        String name = line.substring(0, colonIndex).trim();
+        String value = line.substring(colonIndex + 1).trim();
+
+        // Store lowercase for case-insensitive lookup
+        headers.put(name.toLowerCase(), value);
+    }
+}
+
+// Usage
+String connection = headers.get("connection");
+boolean wantsClose = "close".equalsIgnoreCase(connection);</div>
+
+        <div class="note">
+            <strong>💡 Best Practice:</strong> Store header names in lowercase since HTTP headers are case-insensitive. This makes lookups simpler and more reliable.
+        </div>
+
+        <h2>Parsing URL Paths</h2>
+
+        <p>For the /echo endpoint, extract the size parameter:</p>
+
+        <div class="code-block">// Path: "/echo/1000"
+if (path.startsWith("/echo/")) {
+    String[] parts = path.split("/");
+
+    if (parts.length < 3) {
+        sendError(out, 400, "Bad Request - size required");
+        return;
+    }
+
+    try {
+        int size = Integer.parseInt(parts[2]);
+
+        if (size < 0 || size > 100_000_000) {
+            sendError(out, 400, "Size out of range");
+            return;
+        }
+
+        // Valid size, generate payload...
+
+    } catch (NumberFormatException e) {
+        sendError(out, 400, "Invalid size");
+        return;
+    }
+}</div>
+
+        <h2>Handling Malformed Input</h2>
+
+        <div class="code-block">// ❌ BAD: No validation
+String requestLine = in.readLine();
+String[] parts = requestLine.split(" ");
+String method = parts[0];  // NullPointerException if requestLine is null
+                           // ArrayIndexOutOfBoundsException if no spaces
+
+// ✅ GOOD: Validate at every step
+String requestLine = in.readLine();
+
+if (requestLine == null || requestLine.isEmpty()) {
+    return;  // Client closed or sent empty line
+}
+
+String[] parts = requestLine.split(" ");
+
+if (parts.length < 2) {
+    sendError(out, 400, "Bad Request");
+    return;
+}
+
+String method = parts[0];  // Safe now!</div>
+
+        <h2>Reading the Request Body (Not in this server)</h2>
+
+        <p>For POST requests, you'd need to read the body based on Content-Length:</p>
+
+        <div class="code-block">// Get Content-Length header
+String lengthHeader = headers.get("content-length");
+int contentLength = Integer.parseInt(lengthHeader);
+
+// Read exactly contentLength bytes
+char[] body = new char[contentLength];
+int totalRead = 0;
+
+while (totalRead < contentLength) {
+    int read = in.read(body, totalRead, contentLength - totalRead);
+    if (read == -1) break;  // Connection closed
+    totalRead += read;
+}</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="http-request-response.html">HTTP Request/Response Anatomy</a></li>
+                <li><a href="http-headers.html">HTTP Headers Reference</a></li>
+                <li><a href="security-basics.html">Web Server Security Basics</a></li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

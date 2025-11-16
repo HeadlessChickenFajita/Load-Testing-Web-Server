@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Headers Reference</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        h3 { color: #667eea; margin-top: 20px; }
+        .code-block {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .header-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        .header-card h4 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .required-badge {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .optional-badge {
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .note {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        .back-link:hover { text-decoration: underline; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #667eea;
+            color: white;
+        }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>HTTP Headers Reference</h1>
+
+        <p>HTTP headers are key-value pairs that provide metadata about requests and responses. Understanding these headers is essential for building a compliant web server.</p>
+
+        <h2>Common Request Headers</h2>
+
+        <div class="header-card">
+            <h4>Host <span class="required-badge">REQUIRED in HTTP/1.1</span></h4>
+            <p><strong>Purpose:</strong> Specifies the domain name of the server (and optionally the port)</p>
+            <div class="code-block">Host: localhost:8080</div>
+            <p><strong>Why it matters:</strong> Allows one IP address to host multiple domains (virtual hosting)</p>
+        </div>
+
+        <div class="header-card">
+            <h4>Connection <span class="optional-badge">OPTIONAL</span></h4>
+            <p><strong>Purpose:</strong> Controls whether the connection stays open after the current request/response</p>
+            <div class="code-block">Connection: keep-alive  # Reuse connection
+Connection: close       # Close after response</div>
+            <p><strong>Default in HTTP/1.1:</strong> keep-alive (if not specified)</p>
+        </div>
+
+        <div class="header-card">
+            <h4>User-Agent <span class="optional-badge">OPTIONAL</span></h4>
+            <p><strong>Purpose:</strong> Identifies the client software making the request</p>
+            <div class="code-block">User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+User-Agent: ltc/1.0
+User-Agent: curl/7.68.0</div>
+            <p><strong>Use case:</strong> Server analytics, debugging, browser-specific behavior</p>
+        </div>
+
+        <div class="header-card">
+            <h4>Accept <span class="optional-badge">OPTIONAL</span></h4>
+            <p><strong>Purpose:</strong> Tells the server what content types the client can handle</p>
+            <div class="code-block">Accept: text/html
+Accept: application/json
+Accept: */*  # Accept any content type</div>
+            <p><strong>Use case:</strong> Content negotiation (return JSON vs HTML based on client preference)</p>
+        </div>
+
+        <h2>Common Response Headers</h2>
+
+        <div class="header-card">
+            <h4>Content-Type <span class="required-badge">REQUIRED (if body present)</span></h4>
+            <p><strong>Purpose:</strong> Specifies the media type of the response body</p>
+            <div class="code-block">Content-Type: text/html
+Content-Type: text/plain
+Content-Type: application/json
+Content-Type: image/png</div>
+            <p><strong>Why it matters:</strong> Tells the client how to interpret the response body</p>
+        </div>
+
+        <div class="header-card">
+            <h4>Content-Length <span class="required-badge">REQUIRED</span></h4>
+            <p><strong>Purpose:</strong> The size of the response body in bytes</p>
+            <div class="code-block">Content-Length: 1000</div>
+            <p><strong>Why it matters:</strong> The client knows exactly how many bytes to read. Without this, the connection must close to signal end of response (no keep-alive possible).</p>
+        </div>
+
+        <div class="header-card">
+            <h4>Connection <span class="optional-badge">OPTIONAL</span></h4>
+            <p><strong>Purpose:</strong> Tells the client whether the server will keep the connection open</p>
+            <div class="code-block">Connection: keep-alive
+Connection: close</div>
+            <p><strong>Important:</strong> Must match the server's actual behavior (don't say keep-alive if you close!)</p>
+        </div>
+
+        <h2>Custom Headers (X- Prefix)</h2>
+
+        <p>Servers can define custom headers, traditionally prefixed with <code>X-</code>:</p>
+
+        <div class="header-card">
+            <h4>X-Payload-Hash <span class="optional-badge">CUSTOM</span></h4>
+            <p><strong>Purpose:</strong> In our server, this header contains the SHA-256 hash of the payload</p>
+            <div class="code-block">X-Payload-Hash: d3b07384d113edec49eaa6238ad5ff00</div>
+            <p><strong>Use case:</strong> Client can verify data integrity by hashing received payload and comparing</p>
+        </div>
+
+        <h2>Header Format Rules</h2>
+
+        <ol>
+            <li><strong>Format:</strong> <code>Header-Name: value</code></li>
+            <li><strong>Whitespace:</strong> Space after colon is optional but conventional</li>
+            <li><strong>Case:</strong> Header names are case-insensitive (<code>Content-Type</code> = <code>content-type</code>)</li>
+            <li><strong>Line ending:</strong> Each header ends with <code>\r\n</code></li>
+            <li><strong>Headers end:</strong> A blank line (<code>\r\n\code>) signals end of headers</li>
+        </ol>
+
+        <div class="code-block">HTTP/1.1 200 OK\r\n
+Content-Type: text/plain\r\n
+Content-Length: 13\r\n
+Connection: keep-alive\r\n
+\r\n
+Hello, World!</div>
+
+        <h2>Parsing Headers in Java</h2>
+
+        <div class="code-block">Map&lt;String, String&gt; headers = new HashMap&lt;&gt;();
+String line;
+
+while ((line = in.readLine()) != null && !line.isEmpty()) {
+    int colonIndex = line.indexOf(':');
+
+    if (colonIndex > 0) {
+        String name = line.substring(0, colonIndex).trim();
+        String value = line.substring(colonIndex + 1).trim();
+
+        // Store in lowercase for case-insensitive lookup
+        headers.put(name.toLowerCase(), value);
+    }
+}
+
+// Usage
+String connection = headers.get("connection");
+boolean wantsClose = "close".equalsIgnoreCase(connection);</div>
+
+        <div class="note">
+            <strong>💡 Best Practice:</strong> Always store header names in lowercase for case-insensitive comparison, since HTTP headers are case-insensitive per the spec.
+        </div>
+
+        <h2>Writing Response Headers</h2>
+
+        <p>Always write headers in this order:</p>
+
+        <ol>
+            <li>Status line</li>
+            <li>Content-Type (if body present)</li>
+            <li>Content-Length (always, for keep-alive)</li>
+            <li>Custom headers (X-* headers)</li>
+            <li>Connection</li>
+            <li>Blank line</li>
+            <li>Body</li>
+        </ol>
+
+        <div class="code-block">PrintWriter writer = new PrintWriter(out, false);
+
+// 1. Status line
+writer.print("HTTP/1.1 200 OK\r\n");
+
+// 2. Content-Type
+writer.print("Content-Type: text/plain\r\n");
+
+// 3. Content-Length
+writer.print("Content-Length: " + content.length + "\r\n");
+
+// 4. Custom headers
+writer.print("X-Payload-Hash: " + hash + "\r\n");
+
+// 5. Connection
+writer.print("Connection: keep-alive\r\n");
+
+// 6. Blank line (end of headers)
+writer.print("\r\n");
+writer.flush();
+
+// 7. Body
+out.write(content);
+out.flush();</div>
+
+        <h2>Common Mistakes</h2>
+
+        <table>
+            <tr>
+                <th>Mistake</th>
+                <th>Problem</th>
+                <th>Fix</th>
+            </tr>
+            <tr>
+                <td>Using <code>\n</code> instead of <code>\r\n</code></td>
+                <td>Not HTTP-compliant</td>
+                <td>Always use <code>\r\n</code> for line endings</td>
+            </tr>
+            <tr>
+                <td>Forgetting blank line after headers</td>
+                <td>Client waits forever for body</td>
+                <td>Always send <code>\r\n\r\n</code> after last header</td>
+            </tr>
+            <tr>
+                <td>Wrong Content-Length</td>
+                <td>Client reads wrong amount of data</td>
+                <td>Use <code>content.length</code> or <code>getBytes().length</code></td>
+            </tr>
+            <tr>
+                <td>Saying keep-alive but closing</td>
+                <td>Client tries to reuse closed connection</td>
+                <td>Match Connection header to actual behavior</td>
+            </tr>
+            <tr>
+                <td>Not flushing after headers</td>
+                <td>Headers buffered, not sent</td>
+                <td>Call <code>writer.flush()</code> after headers</td>
+            </tr>
+        </table>
+
+        <h2>Debugging Headers</h2>
+
+        <p>View headers with curl's verbose mode:</p>
+        <div class="code-block">curl -v http://localhost:8080/echo/100
+
+# Output includes:
+> GET /echo/100 HTTP/1.1        # Request
+> Host: localhost:8080          # Request headers
+> User-Agent: curl/7.68.0
+>
+&lt; HTTP/1.1 200 OK               # Response
+&lt; Content-Type: text/plain      # Response headers
+&lt; Content-Length: 100
+&lt; Connection: keep-alive
+&lt;</div>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="http-request-response.html">HTTP Request/Response Anatomy</a> - Full message structure</li>
+                <li><a href="http-keep-alive.html">HTTP Keep-Alive</a> - Connection header in depth</li>
+                <li><a href="parsing-requests.html">Parsing HTTP Requests</a> - Implementation details</li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>

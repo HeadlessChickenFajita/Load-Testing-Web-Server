@@ -1,0 +1,14 @@
+# Compiled Java class files
+*.class
+
+# IDE-specific metadata
+.vscode/
+.idea/
+*.iml
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Optional: Ignore the original zip file
+distrib.zip

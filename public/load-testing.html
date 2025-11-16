@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Testing Concepts</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .code-block { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap; }
+        .note { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 15px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #667eea; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+
+        <h1>Load Testing Concepts</h1>
+
+        <p>Load testing measures how your server performs under stress. Understanding the metrics helps you optimize performance.</p>
+
+        <h2>Key Metrics</h2>
+
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>What It Means</th>
+            </tr>
+            <tr>
+                <td><strong>Connections</strong></td>
+                <td>Number of simultaneous TCP connections</td>
+            </tr>
+            <tr>
+                <td><strong>Requests</strong></td>
+                <td>Total HTTP requests sent</td>
+            </tr>
+            <tr>
+                <td><strong>RPS</strong></td>
+                <td>Requests Per Second (throughput)</td>
+            </tr>
+            <tr>
+                <td><strong>Latency</strong></td>
+                <td>Time from request sent to response received</td>
+            </tr>
+            <tr>
+                <td><strong>Success Rate</strong></td>
+                <td>Percentage of requests that succeeded</td>
+            </tr>
+        </table>
+
+        <h2>Understanding ltc.java Output</h2>
+
+        <div class="code-block">Load Test Results:
+==================
+Total requests: 1000
+Successful: 1000
+Failed: 0
+Duration: 5.23 seconds
+Requests/second: 191.20
+
+Latency Percentiles (ms):
+  Min: 12
+  p50: 25      ← 50% of requests faster than this
+  p90: 45      ← 90% of requests faster than this
+  p95: 52      ← 95% of requests faster than this
+  p99: 78      ← 99% of requests faster than this
+  Max: 95
+  Avg: 28.45</div>
+
+        <h2>Latency Percentiles Explained</h2>
+
+        <ul>
+            <li><strong>p50 (median):</strong> Half of requests were faster, half slower</li>
+            <li><strong>p90:</strong> 90% of requests were faster (outliers start here)</li>
+            <li><strong>p99:</strong> 99% of requests were faster (worst-case scenarios)</li>
+            <li><strong>Max:</strong> Slowest request (can be misleading if rare)</li>
+        </ul>
+
+        <div class="note">
+            <strong>💡 Why percentiles matter:</strong> Average can be misleading! If most requests take 10ms but a few take 1000ms, the average looks bad even though most users had a good experience. p50 and p90 tell the real story.
+        </div>
+
+        <h2>Client Parameters</h2>
+
+        <div class="code-block"># Basic usage
+java ltc.java [options]
+
+Options:
+  -c <count>     Number of connections
+  -r <count>     Requests per connection
+  -s <bytes>     Payload size
+  -d <seconds>   Delay after requests (for testing timeouts)</div>
+
+        <h2>Testing Scenarios</h2>
+
+        <h3>1. Test Throughput (RPS)</h3>
+        <div class="code-block">java lts.java -t -q -k 30 8080
+java ltc.java -c 100 -r 100 -s 1000
+
+# Measures: How many requests/sec can server handle?</div>
+
+        <h3>2. Test Concurrency</h3>
+        <div class="code-block">java lts.java -t -k 30 8080
+java ltc.java -c 1000 -r 10 -s 1000
+
+# Measures: Can server handle many simultaneous connections?</div>
+
+        <h3>3. Test Large Payloads</h3>
+        <div class="code-block">java lts.java -t -k 30 8080
+java ltc.java -c 10 -r 10 -s 10000000
+
+# Measures: How does server handle large data transfers?</div>
+
+        <h3>4. Test Keep-Alive Timeout</h3>
+        <div class="code-block">java lts.java -k 2 8080
+java ltc.java -c 5 -r 5 -d 3
+
+# Delay (3s) > timeout (2s) → server closes connection
+# Check server logs for "Keep-alive timeout" messages</div>
+
+        <h2>Interpreting Results</h2>
+
+        <table>
+            <tr>
+                <th>Symptom</th>
+                <th>Possible Cause</th>
+            </tr>
+            <tr>
+                <td>High failure rate</td>
+                <td>Port exhaustion (need keep-alive)</td>
+            </tr>
+            <tr>
+                <td>Low RPS</td>
+                <td>Server not threaded (use -t)</td>
+            </tr>
+            <tr>
+                <td>High p99 latency</td>
+                <td>Server overloaded or slow disk</td>
+            </tr>
+            <tr>
+                <td>Timeouts</td>
+                <td>Timeout too short for payload size</td>
+            </tr>
+        </table>
+
+        <div class="note">
+            <strong>📚 Further Reading:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><a href="keep-alive-performance.html">Keep-Alive Performance</a></li>
+                <li><a href="virtual-threads.html">Virtual Threads</a></li>
+            </ul>
+        </div>
+
+        <p style="margin-top: 40px;"><a href="index.html" class="back-link">← Back to Home</a></p>
+    </div>
+</body>
+</html>
