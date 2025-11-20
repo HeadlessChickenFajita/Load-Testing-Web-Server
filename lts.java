@@ -163,6 +163,11 @@ public class lts {
     //
     private void handleConnection(Socket socket) throws IOException {
         // TODO: Implement dispatch logic
+        if (keepAlive){
+            handleWithKeepAlive(socket); // persistant connection
+        }else {
+            handleBasic(socket);
+        }
     }
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -177,9 +182,9 @@ public class lts {
     // this method returns.
     //
     // TODO: Phase 1
-    //   1. Create BufferedReader and OutputStream from socket streams
-    //   2. Read the request line with in.readLine()
-    //   3. Use parseHeaders() to read headers into a map
+    //   1. Create BufferedReader and OutputStream from socket streams .
+    //   2. Read the request line with in.readLine() .
+    //   3. Use parseHeaders() to read headers into a map .
     //   4. Use validateRequest() to extract method and path
     //   5. Check that method is "GET", send 405 error if not
     //   6. Use dispatchRequest() to route to appropriate handler
@@ -189,8 +194,37 @@ public class lts {
     //   Hint: Check the 'quiet' flag before logging
     //
     private void handleBasic(Socket socket) throws IOException {
+        long startTime = System.currentTimeMillis();
         // TODO: Implement basic request handling
-    }
+        BufferedReader  reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        String requestLine = reader.readLine();
+        if (requestLine == null) return;
+        
+        // Validate
+        String[] requestParts = validateRequest(requestLine); // extracts method & path
+        if (requestParts == null) return;
+        
+        String method = requestParts[0];
+        String path = requestParts[1]; 
+
+        Map<String, String> headers = parseHeaders(reader);
+        
+        OutputStream out = socket.getOutputStream();
+
+        if (!method.equals("GET")) {
+            sendError(out, 405, "Method Not Allowed", false);
+            return;
+        }
+
+        dispatchRequest(out, path, false);
+
+        // Log request if not in quiet mode
+        if (!quiet) {
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println(method + " " + path + " " + duration + "ms");
+        }
+        
+    } // end handleBasic
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleWithKeepAlive
@@ -334,6 +368,7 @@ public class lts {
     //
     private void dispatchRequest(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement routing logic
+        
     }
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
