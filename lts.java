@@ -368,7 +368,12 @@ public class lts {
     //
     private void dispatchRequest(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement routing logic
-        
+        // phase 1 -> route to handlestaticfile
+        if (path.startsWith("/echo/")) {
+            handleEcho(out, path, shouldKeepAlive);
+        }else{
+            handleStaticFile(out, path, shouldKeepAlive);
+        }
     }
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -441,6 +446,23 @@ public class lts {
     //
     private void handleStaticFile(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement static file serving with security checks
+        if (path.equals("/")) {
+            path = "/index.html";
+        }
+        if (path.contains("..")) {
+            sendError(out, 403, "Forbidden", shouldKeepAlive);
+            return;
+        }
+        Path filePath = Paths.get(PUBLIC_DIR, path);
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            if (!tryServeCustom404(out, shouldKeepAlive)) {
+                sendError(out, 404, "Not Found", shouldKeepAlive);
+            }
+            return;
+        }
+        byte[] content = Files.readAllBytes(filePath);
+        String contentType = guessContentType(path);
+        sendResponse(out, 200, "OK", contentType, content, null, shouldKeepAlive);
     }
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -509,7 +531,31 @@ public class lts {
     private void sendResponse(OutputStream out, int code, String message, String contentType,
                              byte[] body, Map<String, String> extraHeaders, boolean shouldKeepAlive)
                              throws IOException {
-        // TODO: Implement HTTP response formatting
+                                
+        PrintWriter writer = new PrintWriter(out, false); // autoFlush = false
+        
+        // Status Line
+        writer.print("HTTP/1.1 " + code + " " + message + "\r\n");
+        
+        // Headers
+        writer.print("Content-Type: " + contentType + "\r\n");
+        writer.print("Content-Length: " + body.length + "\r\n");
+        
+        if (extraHeaders != null) {
+            for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+                writer.print(entry.getKey() + ": " + entry.getValue() + "\r\n");
+            }
+        }
+        
+        writer.print("Connection: " + (shouldKeepAlive ? "keep-alive" : "close") + "\r\n");
+        
+        // Blank line separating headers from body
+        writer.print("\r\n");
+        writer.flush();
+        
+        // Body
+        out.write(body);
+        out.flush();
     }
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -533,7 +579,9 @@ public class lts {
     //
     private void sendError(OutputStream out, int code, String message, boolean shouldKeepAlive)
                           throws IOException {
-        // TODO: Implement error response wrapper
+        String htmlBody = "<html><body><h1>" + code + " " + message + "</h1></body></html>";
+        byte[] bodyBytes = htmlBody.getBytes();
+        sendResponse(out, code, message, "text/html", bodyBytes, null, shouldKeepAlive);
     }
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
