@@ -326,8 +326,14 @@ public class lts {
     }
 
     private boolean tryServeCustom404(OutputStream out, boolean shouldKeepAlive) throws IOException {
-        // TODO: Implement custom 404 page serving
-        return false; // Placeholder - replace with actual implementation
+
+        Path custom404Path = Paths.get(PUBLIC_DIR, "404.html");
+        if (Files.exists(custom404Path) && Files.isRegularFile(custom404Path)) {
+            byte[] content = Files.readAllBytes(custom404Path);
+            sendResponse(out, 404, "Not Found", "text/html", content, null, shouldKeepAlive);
+            return true;
+        }
+        return false;
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
