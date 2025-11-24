@@ -32,7 +32,7 @@ public class lts {
     private boolean keepAlive = false;
     private int keepAliveTimeout = DEFAULT_KEEPALIVE_TIMEOUT;
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // main
     //
     // Entry point - creates server instance and delegates to appMain.
@@ -42,7 +42,7 @@ public class lts {
         new lts().appMain(args);
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // appMain
     //
     // Configures and runs the HTTP server based on command-line arguments.
@@ -98,7 +98,8 @@ public class lts {
             System.out.println("Server started on port " + port);
             System.out.println("Mode: " + (threaded ? "Virtual Threaded" : "Single Threaded"));
             System.out.println("Logging: " + (quiet ? "Quiet" : "Verbose"));
-            System.out.println("Keep-Alive: " + (keepAlive ? "Enabled (timeout: " + keepAliveTimeout + "s)" : "Disabled"));
+            System.out.println(
+                    "Keep-Alive: " + (keepAlive ? "Enabled (timeout: " + keepAliveTimeout + "s)" : "Disabled"));
             System.out.println("Static files served from: " + PUBLIC_DIR);
 
             // Main server loop - accept and dispatch connections
@@ -123,7 +124,7 @@ public class lts {
         }
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // printUsage
     //
     // Displays command-line help with available options and examples.
@@ -144,11 +145,11 @@ public class lts {
         System.out.println("  java lts.java -t -k -q 8080  All options combined");
     }
 
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Request Handling Strategy
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleConnection
     //
     // Dispatches to appropriate handler based on keep-alive mode.
@@ -156,21 +157,21 @@ public class lts {
     // handler for persistent connections.
     //
     // TODO: Phase 1
-    //   Check the keepAlive instance variable to determine which handler
-    //   to call. This separates Phase 1 implementation (handleBasic) from
-    //   Phase 2 implementation (handleWithKeepAlive), allowing you to test
-    //   each phase independently.
+    // Check the keepAlive instance variable to determine which handler
+    // to call. This separates Phase 1 implementation (handleBasic) from
+    // Phase 2 implementation (handleWithKeepAlive), allowing you to test
+    // each phase independently.
     //
     private void handleConnection(Socket socket) throws IOException {
         // TODO: Implement dispatch logic
-        if (keepAlive){
+        if (keepAlive) {
             handleWithKeepAlive(socket); // persistant connection
-        }else {
+        } else {
             handleBasic(socket);
         }
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleBasic
     //
     // Handles a single HTTP request and closes the connection.
@@ -182,33 +183,41 @@ public class lts {
     // this method returns.
     //
     // TODO: Phase 1
-    //   1. Create BufferedReader and OutputStream from socket streams .
-    //   2. Read the request line with in.readLine() .
-    //   3. Use parseHeaders() to read headers into a map .
-    //   4. Use validateRequest() to extract method and path
-    //   5. Check that method is "GET", send 405 error if not
-    //   6. Use dispatchRequest() to route to appropriate handler
-    //   7. Pass false for shouldKeepAlive (basic mode doesn't persist)
+    // 1. Create BufferedReader and OutputStream from socket streams .
+    // 2. Read the request line with in.readLine() .
+    // 3. Use parseHeaders() to read headers into a map .
+    // 4. Use validateRequest() to extract method and path
+    // 5. Check that method is "GET", send 405 error if not
+    // 6. Use dispatchRequest() to route to appropriate handler
+    // 7. Pass false for shouldKeepAlive (basic mode doesn't persist)
     //
-    //   Hint: System.currentTimeMillis() can track request duration
-    //   Hint: Check the 'quiet' flag before logging
+    // Hint: System.currentTimeMillis() can track request duration
+    // Hint: Check the 'quiet' flag before logging
     //
     private void handleBasic(Socket socket) throws IOException {
-        long startTime = System.currentTimeMillis();
-        // TODO: Implement basic request handling
-        BufferedReader  reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        long startTime = System.currentTimeMillis(); // socket connection start time
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String requestLine = reader.readLine();
-        if (requestLine == null) return;
-        
+
+        if (requestLine == null) {
+            return; // socket connection closed early
+        }
+
         // Validate
         String[] requestParts = validateRequest(requestLine); // extracts method & path
-        if (requestParts == null) return;
-        
+        if (requestParts == null) {
+            OutputStream out = socket.getOutputStream();
+            sendError(out, 400, "Bad Request", false);
+            return;
+        }
+
         String method = requestParts[0];
-        String path = requestParts[1]; 
+        String path = requestParts[1];
 
         Map<String, String> headers = parseHeaders(reader);
-        
+
         OutputStream out = socket.getOutputStream();
 
         if (!method.equals("GET")) {
@@ -216,17 +225,16 @@ public class lts {
             return;
         }
 
-        dispatchRequest(out, path, false);
+        dispatchRequest(out, path, false); // pass false for shouldKeepAlive (basic mode doesn't persist)
 
         // Log request if not in quiet mode
         if (!quiet) {
             long duration = System.currentTimeMillis() - startTime;
             System.out.println(method + " " + path + " " + duration + "ms");
-        }
-        
+        } // connection closes automatically here
     } // end handleBasic
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleWithKeepAlive
     //
     // Handles multiple HTTP requests on a single connection with timeout.
@@ -235,33 +243,80 @@ public class lts {
     // This handler implements HTTP/1.1 persistent connections. It loops to
     // process multiple requests on the same TCP connection, reducing the
     // overhead of connection setup/teardown. The loop exits when:
-    //   - Client sends "Connection: close" header
-    //   - Socket timeout expires (no request within keepAliveTimeout seconds)
-    //   - Client closes connection (readLine returns null)
-    //   - An error occurs
+    // - Client sends "Connection: close" header
+    // - Socket timeout expires (no request within keepAliveTimeout seconds)
+    // - Client closes connection (readLine returns null)
+    // - An error occurs
     //
     // TODO: Phase 2
-    //   1. Set socket timeout using socket.setSoTimeout(keepAliveTimeout * 1000)
-    //   2. Create BufferedReader and OutputStream from socket streams
-    //   3. Enter infinite loop for handling multiple requests
-    //   4. Wrap in.readLine() in try-catch to handle SocketTimeoutException
-    //   5. Break loop if timeout, null, or empty request line
-    //   6. Parse headers and validate request (similar to handleBasic)
-    //   7. Check headers.get("connection") to see if client sent "close"
-    //   8. Calculate shouldKeepAlive = !clientWantsClose
-    //   9. Pass shouldKeepAlive to dispatchRequest (tells response handler)
-    //   10. Break loop if shouldKeepAlive is false
+    // 1. Set socket timeout using socket.setSoTimeout(keepAliveTimeout * 1000)
+    // 2. Create BufferedReader and OutputStream from socket streams
+    // 3. Enter infinite loop for handling multiple requests
+    // 4. Wrap in.readLine() in try-catch to handle SocketTimeoutException
+    // 5. Break loop if timeout, null, or empty request line
+    // 6. Parse headers and validate request (similar to handleBasic)
+    // 7. Check headers.get("connection") to see if client sent "close"
+    // 8. Calculate shouldKeepAlive = !clientWantsClose
+    // 9. Pass shouldKeepAlive to dispatchRequest (tells response handler)
+    // 10. Break loop if shouldKeepAlive is false
     //
-    //   Key difference from handleBasic: The LOOP and Connection header negotiation
+    // Key difference from handleBasic: The LOOP and Connection header negotiation
     //
-    //   Hint: Use headers.getOrDefault("connection", "") to safely get header
-    //   Hint: Use .equalsIgnoreCase("close") for case-insensitive comparison
+    // Hint: Use headers.getOrDefault("connection", "") to safely get header
+    // Hint: Use .equalsIgnoreCase("close") for case-insensitive comparison
     //
     private void handleWithKeepAlive(Socket socket) throws IOException {
         // TODO: Implement keep-alive request handling with loop
-    }
+        long startTime = System.currentTimeMillis();
+        socket.setSoTimeout(keepAliveTimeout * 1000);
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        OutputStream out = socket.getOutputStream();
+
+        while (true) {
+            String requestLine;
+            try {
+                requestLine = reader.readLine();
+            } catch (SocketTimeoutException e) {
+                return; // timeout
+            }
+            if (requestLine == null || requestLine.isEmpty()) {
+                return; // socket closed because empty request line / null
+            }
+            // Parse and Validate Request
+            String[] requestParts = validateRequest(requestLine);
+            if (requestParts == null) {
+                sendError(out, 400, "Bad Request", true);
+                return;
+            }
+
+            String method = requestParts[0];
+            String path = requestParts[1];
+
+            Map<String, String> headers = parseHeaders(reader);
+
+            if (!method.equals("GET")) {
+                sendError(out, 405, "Method Not Allowed", true);
+                return;
+            }
+
+            String connectionHeader = headers.get("connection");
+            boolean clientWantsClose = (connectionHeader != null && connectionHeader.equalsIgnoreCase("close"));
+            boolean shouldKeepAlive = !clientWantsClose;
+            dispatchRequest(out, path, shouldKeepAlive);
+
+            if (!quiet) {
+                long now = System.currentTimeMillis();
+                System.out.println(method + " " + path + " " + (now - startTime) + "ms");
+            }
+
+            if (!shouldKeepAlive) {
+                return;
+            }
+        }
+    } // end handleWithKeepAlive
+
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleConnectionThreaded
     //
     // Handles a connection in a new virtual thread.
@@ -273,37 +328,37 @@ public class lts {
     // concurrent connections without the overhead of platform threads.
     //
     // TODO: Phase 3
-    //   1. Use Thread.ofVirtual().start() to create and start a virtual thread
-    //   2. Inside the lambda:
-    //      - Wrap handleConnection(socket) in try-catch for IOException
-    //      - Add finally block to ensure socket.close() always happens
-    //      - Catch and log any errors during close as well
-    //   3. Log errors to System.err with descriptive messages
+    // 1. Use Thread.ofVirtual().start() to create and start a virtual thread
+    // 2. Inside the lambda:
+    // - Wrap handleConnection(socket) in try-catch for IOException
+    // - Add finally block to ensure socket.close() always happens
+    // - Catch and log any errors during close as well
+    // 3. Log errors to System.err with descriptive messages
     //
-    //   Pattern:
-    //     Thread.ofVirtual().start(() -> {
-    //         try {
-    //             // handle connection
-    //         } catch (IOException e) {
-    //             // log error
-    //         } finally {
-    //             // close socket with its own try-catch
-    //         }
-    //     });
+    // Pattern:
+    // Thread.ofVirtual().start(() -> {
+    // try {
+    // // handle connection
+    // } catch (IOException e) {
+    // // log error
+    // } finally {
+    // // close socket with its own try-catch
+    // }
+    // });
     //
-    //   Key insight: The method returns immediately after spawning the thread,
-    //   allowing the main loop to accept the next connection while this one
-    //   is processed concurrently.
+    // Key insight: The method returns immediately after spawning the thread,
+    // allowing the main loop to accept the next connection while this one
+    // is processed concurrently.
     //
     private void handleConnectionThreaded(Socket socket) {
         // TODO: Implement virtual thread connection handling
     }
 
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Request Processing Utilities
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // parseHeaders
     //
     // Reads HTTP headers from input stream and returns them as a map.
@@ -330,7 +385,7 @@ public class lts {
         return headers;
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // validateRequest
     //
     // Validates request line format and returns [method, path] array.
@@ -350,37 +405,37 @@ public class lts {
         return new String[] { parts[0], parts[1] };
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // dispatchRequest
     //
     // Routes request to appropriate handler based on path.
     //
     // Routing rules:
-    //   /echo/{size} -> handleEcho (dynamic payload generation)
-    //   Everything else -> handleStaticFile (serve from public/ directory)
+    // /echo/{size} -> handleEcho (dynamic payload generation)
+    // Everything else -> handleStaticFile (serve from public/ directory)
     //
     // TODO: Phase 1
-    //   Check if path starts with "/echo/" and route accordingly.
-    //   For Phase 1, you only need to route to handleStaticFile.
-    //   Phase 3 will add handleEcho implementation.
+    // Check if path starts with "/echo/" and route accordingly.
+    // For Phase 1, you only need to route to handleStaticFile.
+    // Phase 3 will add handleEcho implementation.
     //
-    //   Hint: Use path.startsWith() to check the prefix
+    // Hint: Use path.startsWith() to check the prefix
     //
     private void dispatchRequest(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement routing logic
         // phase 1 -> route to handlestaticfile
         if (path.startsWith("/echo/")) {
             handleEcho(out, path, shouldKeepAlive);
-        }else{
+        } else {
             handleStaticFile(out, path, shouldKeepAlive);
         }
-    }
+    } // end dispatchRequest
 
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Endpoint Handlers
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleEcho
     //
     // Handles /echo/{size} endpoint - generates deterministic payload of
@@ -394,55 +449,58 @@ public class lts {
     // Example: GET /echo/100 returns 100 bytes with X-Payload-Hash header
     //
     // TODO: Phase 3
-    //   1. Split path by "/" and extract size from parts[2]
-    //   2. Validate that parts.length >= 3, send 400 error if not
-    //   3. Parse size as integer with Integer.parseInt(), send 400 if invalid
-    //   4. Check size >= 0, send 400 if negative
-    //   5. Call generatePayload(size) to create byte array
-    //   6. Compute SHA-256 hash:
-    //      - MessageDigest.getInstance("SHA-256")
-    //      - digest.digest(payload) returns hash bytes
-    //      - Use bytesToHex() to convert to hex string
-    //   7. Create HashMap for extra headers, put "X-Payload-Hash" -> hash
-    //   8. Call sendResponse with 200, "OK", "text/plain", payload, extraHeaders, shouldKeepAlive
+    // 1. Split path by "/" and extract size from parts[2]
+    // 2. Validate that parts.length >= 3, send 400 error if not
+    // 3. Parse size as integer with Integer.parseInt(), send 400 if invalid
+    // 4. Check size >= 0, send 400 if negative
+    // 5. Call generatePayload(size) to create byte array
+    // 6. Compute SHA-256 hash:
+    // - MessageDigest.getInstance("SHA-256")
+    // - digest.digest(payload) returns hash bytes
+    // - Use bytesToHex() to convert to hex string
+    // 7. Create HashMap for extra headers, put "X-Payload-Hash" -> hash
+    // 8. Call sendResponse with 200, "OK", "text/plain", payload, extraHeaders,
+    // shouldKeepAlive
     //
-    //   Hint: Wrap MessageDigest in try-catch, send 500 error on exception
-    //   Hint: Use sendError() for all error responses
+    // Hint: Wrap MessageDigest in try-catch, send 500 error on exception
+    // Hint: Use sendError() for all error responses
     //
     private void handleEcho(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement echo endpoint with hash generation
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // handleStaticFile
     //
     // Serves static files from the public directory. Handles default
     // index.html, directory traversal protection, and custom 404 pages.
     //
     // Security considerations:
-    //   - Rejects paths containing ".." to prevent directory traversal
-    //   - Only serves regular files (not directories or special files)
-    //   - All paths are relative to PUBLIC_DIR
+    // - Rejects paths containing ".." to prevent directory traversal
+    // - Only serves regular files (not directories or special files)
+    // - All paths are relative to PUBLIC_DIR
     //
     // Special cases:
-    //   - "/" is mapped to "/index.html"
-    //   - Missing files trigger custom 404.html if it exists
+    // - "/" is mapped to "/index.html"
+    // - Missing files trigger custom 404.html if it exists
     //
     // TODO: Phase 1
-    //   1. Check if path equals "/" and map it to "/index.html"
-    //   2. SECURITY: Check if path contains ".." and send 403 error if so
-    //   3. Build full path: Paths.get(PUBLIC_DIR, path)
-    //   4. Check if file exists AND is regular file with Files.exists() and Files.isRegularFile()
-    //   5. If file not found:
-    //      - Try tryServeCustom404() (Phase 2 feature, just call it)
-    //      - If that returns false, sendError 404
-    //   6. If file exists:
-    //      - Read content with Files.readAllBytes()
-    //      - Get MIME type with guessContentType()
-    //      - Call sendResponse with 200, "OK", contentType, content, null, shouldKeepAlive
+    // 1. Check if path equals "/" and map it to "/index.html"
+    // 2. SECURITY: Check if path contains ".." and send 403 error if so
+    // 3. Build full path: Paths.get(PUBLIC_DIR, path)
+    // 4. Check if file exists AND is regular file with Files.exists() and
+    // Files.isRegularFile()
+    // 5. If file not found:
+    // - Try tryServeCustom404() (Phase 2 feature, just call it)
+    // - If that returns false, sendError 404
+    // 6. If file exists:
+    // - Read content with Files.readAllBytes()
+    // - Get MIME type with guessContentType()
+    // - Call sendResponse with 200, "OK", contentType, content, null,
+    // shouldKeepAlive
     //
-    //   Hint: Use path.contains("..") for security check
-    //   Hint: tryServeCustom404 returns true if it handled the 404
+    // Hint: Use path.contains("..") for security check
+    // Hint: tryServeCustom404 returns true if it handled the 404
     //
     private void handleStaticFile(OutputStream out, String path, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement static file serving with security checks
@@ -465,7 +523,7 @@ public class lts {
         sendResponse(out, 200, "OK", contentType, content, null, shouldKeepAlive);
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // tryServeCustom404
     //
     // Attempts to serve custom 404.html page if it exists.
@@ -475,26 +533,27 @@ public class lts {
     // allowing site-specific branding and helpful navigation on 404 errors.
     //
     // TODO: Phase 2
-    //   1. Build path to 404.html: Paths.get(PUBLIC_DIR, "404.html")
-    //   2. Check if it exists AND is a regular file
-    //   3. If it doesn't exist, return false
-    //   4. If it exists:
-    //      - Read content with Files.readAllBytes()
-    //      - Call sendResponse with 404, "Not Found", "text/html", content, null, shouldKeepAlive
-    //      - Return true
+    // 1. Build path to 404.html: Paths.get(PUBLIC_DIR, "404.html")
+    // 2. Check if it exists AND is a regular file
+    // 3. If it doesn't exist, return false
+    // 4. If it exists:
+    // - Read content with Files.readAllBytes()
+    // - Call sendResponse with 404, "Not Found", "text/html", content, null,
+    // shouldKeepAlive
+    // - Return true
     //
-    //   Note: Still send 404 status code, just with custom HTML content
+    // Note: Still send 404 status code, just with custom HTML content
     //
     private boolean tryServeCustom404(OutputStream out, boolean shouldKeepAlive) throws IOException {
         // TODO: Implement custom 404 page serving
         return false; // Placeholder - replace with actual implementation
     }
 
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Response Utilities
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // sendResponse
     //
     // Unified response writer - sends HTTP response with status, headers,
@@ -502,63 +561,65 @@ public class lts {
     //
     // All responses go through this method, ensuring consistent formatting.
     // HTTP response format:
-    //   Status line: "HTTP/1.1 {code} {message}\r\n"
-    //   Headers: "Header-Name: value\r\n" ...
-    //   Blank line: "\r\n"
-    //   Body: raw bytes
+    // Status line: "HTTP/1.1 {code} {message}\r\n"
+    // Headers: "Header-Name: value\r\n" ...
+    // Blank line: "\r\n"
+    // Body: raw bytes
     //
     // The Connection header is set based on shouldKeepAlive to inform the
     // client whether the connection will persist after this response.
     //
     // TODO: Phase 1
-    //   1. Create PrintWriter from OutputStream (set autoFlush to false)
-    //   2. Write status line: "HTTP/1.1 {code} {message}\r\n"
-    //   3. Write Content-Type header: "Content-Type: {contentType}\r\n"
-    //   4. Write Content-Length header: "Content-Length: {body.length}\r\n"
-    //   5. If extraHeaders is not null, iterate and write each header
-    //   6. Write Connection header: "Connection: keep-alive" or "close" based on shouldKeepAlive
-    //   7. Write blank line: "\r\n" (separates headers from body)
-    //   8. Flush the PrintWriter
-    //   9. Write body bytes directly to OutputStream with out.write(body)
-    //   10. Flush the OutputStream
+    // 1. Create PrintWriter from OutputStream (set autoFlush to false)
+    // 2. Write status line: "HTTP/1.1 {code} {message}\r\n"
+    // 3. Write Content-Type header: "Content-Type: {contentType}\r\n"
+    // 4. Write Content-Length header: "Content-Length: {body.length}\r\n"
+    // 5. If extraHeaders is not null, iterate and write each header
+    // 6. Write Connection header: "Connection: keep-alive" or "close" based on
+    // shouldKeepAlive
+    // 7. Write blank line: "\r\n" (separates headers from body)
+    // 8. Flush the PrintWriter
+    // 9. Write body bytes directly to OutputStream with out.write(body)
+    // 10. Flush the OutputStream
     //
-    //   CRITICAL: Use "\r\n" (CRLF) for line endings, not "\n"
-    //   CRITICAL: Don't forget the blank line between headers and body
+    // CRITICAL: Use "\r\n" (CRLF) for line endings, not "\n"
+    // CRITICAL: Don't forget the blank line between headers and body
     //
-    //   Hint: Use writer.print() not writer.println() to control line endings
-    //   Hint: Ternary operator for Connection: (shouldKeepAlive ? "keep-alive" : "close")
+    // Hint: Use writer.print() not writer.println() to control line endings
+    // Hint: Ternary operator for Connection: (shouldKeepAlive ? "keep-alive" :
+    // "close")
     //
     private void sendResponse(OutputStream out, int code, String message, String contentType,
-                             byte[] body, Map<String, String> extraHeaders, boolean shouldKeepAlive)
-                             throws IOException {
-                                
+            byte[] body, Map<String, String> extraHeaders, boolean shouldKeepAlive)
+            throws IOException {
+
         PrintWriter writer = new PrintWriter(out, false); // autoFlush = false
-        
+
         // Status Line
         writer.print("HTTP/1.1 " + code + " " + message + "\r\n");
-        
+
         // Headers
         writer.print("Content-Type: " + contentType + "\r\n");
         writer.print("Content-Length: " + body.length + "\r\n");
-        
+
         if (extraHeaders != null) {
             for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
                 writer.print(entry.getKey() + ": " + entry.getValue() + "\r\n");
             }
         }
-        
+
         writer.print("Connection: " + (shouldKeepAlive ? "keep-alive" : "close") + "\r\n");
-        
+
         // Blank line separating headers from body
         writer.print("\r\n");
         writer.flush();
-        
+
         // Body
         out.write(body);
         out.flush();
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // sendError
     //
     // Sends an HTTP error response with a simple HTML body.
@@ -567,24 +628,25 @@ public class lts {
     // minimal HTML page displaying the error code and message.
     //
     // TODO: Phase 1
-    //   1. Create HTML body string: "<html><body><h1>{code} {message}</h1></body></html>"
-    //   2. Call sendResponse with:
-    //      - code and message parameters
-    //      - "text/html" as content type
-    //      - body.getBytes() to convert string to bytes
-    //      - null for extraHeaders (no custom headers needed)
-    //      - shouldKeepAlive parameter
+    // 1. Create HTML body string: "<html><body><h1>{code}
+    // {message}</h1></body></html>"
+    // 2. Call sendResponse with:
+    // - code and message parameters
+    // - "text/html" as content type
+    // - body.getBytes() to convert string to bytes
+    // - null for extraHeaders (no custom headers needed)
+    // - shouldKeepAlive parameter
     //
-    //   This is just a simple wrapper - most work is done by sendResponse
+    // This is just a simple wrapper - most work is done by sendResponse
     //
     private void sendError(OutputStream out, int code, String message, boolean shouldKeepAlive)
-                          throws IOException {
+            throws IOException {
         String htmlBody = "<html><body><h1>" + code + " " + message + "</h1></body></html>";
         byte[] bodyBytes = htmlBody.getBytes();
         sendResponse(out, code, message, "text/html", bodyBytes, null, shouldKeepAlive);
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // guessContentType
     //
     // Maps file extensions to MIME types for Content-Type header.
@@ -608,11 +670,11 @@ public class lts {
         return "application/octet-stream"; // Generic binary data
     }
 
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Data Generation & Hashing
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // generatePayload
     //
     // Generates deterministic byte payload of specified size using a
@@ -637,7 +699,7 @@ public class lts {
         return payload;
     }
 
-    //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    // ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     // bytesToHex
     //
     // Converts byte array to hexadecimal string representation.

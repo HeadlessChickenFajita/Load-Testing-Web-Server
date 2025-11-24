@@ -10,5 +10,3 @@
 .DS_Store
 Thumbs.db
 
-# Optional: Ignore the original zip file
-distrib.zip
